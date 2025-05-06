@@ -3,6 +3,13 @@ import time
 import openai
 from openai import OpenAI
 
+# Helper function to safely render markdown
+def safe_markdown(text):
+    try:
+        st.markdown(text)
+    except UnicodeEncodeError:
+        st.markdown(text.encode('utf-8', 'ignore').decode())
+
 # Show title and description.
 st.title("💬 Chatbot")
 st.write(
@@ -26,14 +33,14 @@ else:
     # Display the existing chat messages.
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            safe_markdown(message["content"])
 
     # Create a chat input field.
     if prompt := st.chat_input("What is up?"):
         # Store and display the current prompt.
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
-            st.markdown(prompt)
+            safe_markdown(prompt)
 
         # Attempt to generate a response using the OpenAI API.
         try:
@@ -49,9 +56,12 @@ else:
             # Stream the response and store it.
             with st.chat_message("assistant"):
                 response = st.write_stream(stream)
+                safe_markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except openai.RateLimitError:
             st.error("Rate limit reached. Please wait and try again shortly.", icon="⏳")
         except openai.OpenAIError as e:
             st.error(f"An error occurred: {e}", icon="⚠️")
+        except UnicodeEncodeError:
+            st.error("A Unicode encoding error occurred. Some characters may not display correctly.", icon="🔤")
